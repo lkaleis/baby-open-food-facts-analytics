@@ -1,0 +1,41 @@
+volumes:
+  kestra-data:
+    driver: local
+
+services:
+  kestra:
+    image: kestra/kestra:latest
+    pull_policy: always
+    user: "root"
+    command: server standalone
+    volumes:
+      - kestra-data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+      - ./flows:/app/storage/flows  # 🔹 Mount your flows directory
+      - ./keys/my-creds.json:/app/gcp-creds.json  # 🔹 Mount GCP credentials
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "/app/gcp-creds.json"
+      KESTRA_CONFIGURATION: |
+        kestra:
+          server:
+            basicAuth:
+              enabled: false
+              username: "admin@kestra.io"
+              password: kestra
+          repository:
+            type: memory  # No PostgreSQL, using in-memory storage
+          storage:
+            type: gcs  # Use Google Cloud Storage
+            gcs:
+              bucket: "lk-babyfoodfacts-bucket"
+              projectId: "open-food-facts-455320"
+          queue:
+            type: memory  # No external queue, using in-memory
+          tasks:
+            tmpDir:
+              path: /tmp/kestra-wd/tmp
+          url: http://localhost:8080/
+    ports:
+      - "8080:8080"
+      - "8081:8081"
