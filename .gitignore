@@ -17,6 +17,8 @@ ny_taxi_postgres_data/
 
 .myenv
 myenv/
+.venv
+venv/
 
 # Local .terraform directories
 **/.terraform/*
