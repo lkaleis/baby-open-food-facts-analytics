@@ -1,77 +1,12 @@
-volumes:
-  postgres-data:
-    driver: local
-  kestra-data:
-    driver: local
+version: '3.8'
 
 services:
-  postgres:
-    image: postgres
+  food-data-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./data:/app/data  # Persist downloaded files locally
+      - ./keys/my-creds.json:/app/gcs-key.json:ro  # Mount GCS key (remove if not needed)
     environment:
-      POSTGRES_DB: kestra
-      POSTGRES_USER: kestra
-      POSTGRES_PASSWORD: k3str4
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-    ports:
-      - "5432:5432"
-  
-  kestra:
-    image: kestra/kestra:latest
-    pull_policy: always
-    user: "root"
-    command: server standalone
-    volumes:
-      - kestra-data:/app/storage
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/kestra-wd:/tmp/kestra-wd
-      - /home/lpop22/baby-open-food-facts-analytics/flows:/app/storage/flows  # 🔹 Mount your flows directory
-      - ./flows:/local_flows  # 🔹 Mount your flows directory
-      - ./keys/my-creds.json:/app/gcp-creds.json  # 🔹 Mount GCP credentials
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: "/app/gcp-creds.json"
-      KESTRA_CONFIGURATION: |
-        datasources:
-          postgres:
-            url: jdbc:postgresql://postgres:5432/kestra
-            driverClassName: org.postgresql.Driver
-            username: kestra
-            password: k3str4
-        kestra:
-          server:
-            basicAuth:
-              enabled: false
-              username: "admin@kestra.io"
-              password: kestra
-          repository:
-            type: postgres
-          storage:
-            type: local
-            local:
-              basePath: "/app/storage"
-          queue:
-            type: postgres
-          tasks:
-            tmpDir:
-              path: /tmp/kestra-wd/tmp
-          url: http://localhost:8080/
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_started
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcs-key.json  # Optional, for GCS auth
